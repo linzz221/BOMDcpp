@@ -11,6 +11,7 @@ class BOMD {
 private:
 	string gjfname;
 	string velname;
+	string gjfhead;
 	vector<string> atomsequ;
 	vecd mass_sequ;
 	vecd coor;

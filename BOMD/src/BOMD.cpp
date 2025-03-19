@@ -1,6 +1,7 @@
 #include <cmath>
 #include <algorithm>
 #include <span>
+#include <numeric>
 #include <sstream>
 #include <mkl.h>
 #include <mkl_vsl.h>
@@ -34,7 +35,7 @@ void BOMD::makevel(double temperature) {
 		return (x - sumv) * fs; });
 }
 
-// will init atomnum, atomsequ, coor
+// will init atomnum, atomsequ, coor, gjfhead
 void BOMD::readgjf() {
 	vector<string> allgjfline_raw;
 	readlines(gjfname, allgjfline_raw);
@@ -43,6 +44,8 @@ void BOMD::readgjf() {
 
 	for (int sl = 0; sl < gjf_line_num; ++sl) {
 		if (allgjfline[sl].starts_with("#")) {
+            gjfhead = accumulate(allgjfline.begin(), allgjfline.begin() + sl + 5, gjfhead, 
+				[](const std::string& acc, const std::string& s) {return acc + s + '\n';});
 			allgjfline = allgjfline.last(gjf_line_num - sl - 5);
 			break;
 		}   
@@ -77,5 +80,5 @@ void BOMD::create_mass_sequ() {
 }
 
 void BOMD::showmass() {
-    showvector(coor);
+	cout << gjfhead << endl;
 }

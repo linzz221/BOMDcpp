@@ -10,6 +10,8 @@ typedef vector<double> vecd;
 class BOMD {
 private:
 	string gjfname;
+	const string tempgjffile = "tempforce.gjf";
+	const string templogfile = "tempforce.log";
 	string velname;
 	string gjfhead;
 	vector<string> atomsequ;
@@ -17,9 +19,9 @@ private:
 	vecd coor;
 	vecd velocity;
 	vecd force;
-	int atomnum;
+	long long atomnum;
 
-	void makevel(double temperature = 300);
+	void makevel(const double& temperature = 300);
     void readgjf();
 	void create_mass_sequ();
 	void rungaussian();
@@ -31,7 +33,7 @@ private:
 public:
 	BOMD(const string& gjfname, const string& velname = "noneed");
 	void showmass();
-	void run(int nstep, double dt = 0.5);
+	void run(long long nstep, double dt = 0.5);
 
 };
 

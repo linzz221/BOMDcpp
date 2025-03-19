@@ -101,11 +101,12 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>D:\python_work\learn_cpp\BOMD\BOMD\include;D:\Program Files %28x86%29\Intel\oneAPI\mkl\2025.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,13 +130,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="BOMD.h" />
-    <ClInclude Include="constant.h" />
-    <ClInclude Include="tools.h" />
+    <ClInclude Include="include\BOMD.h" />
+    <ClInclude Include="include\constant.h" />
+    <ClInclude Include="include\tools.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BOMD.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\BOMD.cpp" />
+    <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="test.gjf" />

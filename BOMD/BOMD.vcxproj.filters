@@ -15,21 +15,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BOMD.h">
+    <ClInclude Include="include\BOMD.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="constant.h">
+    <ClInclude Include="include\constant.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="tools.h">
+    <ClInclude Include="include\tools.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BOMD.cpp">
+    <ClCompile Include="src\BOMD.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="src\main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -12,6 +12,7 @@ private:
 	string gjfname;
 	const string tempgjffile = "tempforce.gjf";
 	const string templogfile = "tempforce.log";
+	const string data_name = "data.txt";
 	string velname;
 	string gjfhead;
 	vector<string> atomsequ;
@@ -22,18 +23,18 @@ private:
 	long long atomnum;
 
 	void makevel(const double& temperature = 300);
-    void readgjf();
+	void readgjf();
 	void create_mass_sequ();
 	void rungaussian();
 	void readforce();
 	void readvel();
 	void create_gjf();
-	void logging_data();
+	void logging_data(ofstream & data, const long long cycle, const double temperature);
+	double calc_temperature();
 
 public:
 	BOMD(const string& gjfname, const string& velname = "noneed");
 	~BOMD();
-	void showmass();
 	void run(long long nstep, double dt = 0.5);
 
 };

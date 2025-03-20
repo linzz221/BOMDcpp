@@ -69,6 +69,15 @@ void BOMD::readvel() {
 	}
 }
 
+double BOMD::calc_temperature() {
+	auto vsize = 3 * atomnum;
+	vecd v2(vsize);
+	vdMul(vsize, velocity.data(), velocity.data(), v2.data());
+	double result = cblas_ddot(vsize, v2.data(), 1, mass_sequ.data(), 1);
+	result = result / 3 / atomnum;
+	return result * cs::temp_au2si;
+}
+
 // will init atomnum, atomsequ, coor, gjfhead
 // and reserve force, velocity, mass_sequ
 void BOMD::readgjf() {
@@ -164,7 +173,29 @@ void BOMD::create_gjf() {
 	gjf.close();
 }
 
+void BOMD::logging_data(ofstream & data ,const long long cycle, 
+	const double temperature) {
+	static string equ40(80, '=');
+	static string sub20(20, '-');
+	const string midd(format("{}  -----cycle  {} -----   Temperature {:3f} ------ {}",
+		sub20, cycle, temperature, sub20));
+	data << equ40 << '\n' << midd << '\n' << equ40 << '\n';
+	for (int i = 0; i < atomnum; ++i) {
+		data << format("{:>4}        {:>15.10f}      {:>15.10f}      {:>15.10f}",
+			atomsequ[i], coor[i * 3], coor[i * 3 + 1], coor[i * 3 + 2]) << '\n';
+	}
+	data << "\n";
+
+}
+
 void BOMD::run(const long long nstep, const double idt) {
+
+	// 先清空data文件
+	ofstream record_clear(data_name, ios::trunc);
+	record_clear.close();
+
+	ofstream record_data(data_name, ios::app);
+
 	double dt = idt / cs::time_au2fs;
 	double dt_d2 = dt / 2;
 	double dt_square = dt * dt / 2;
@@ -177,8 +208,10 @@ void BOMD::run(const long long nstep, const double idt) {
 	vdDiv(vsize, force.data(), mass_sequ.data(), accelerate.data());
 
 	for (long long cycle = 1; cycle <= nstep; ++cycle) {
-		
-        //update coor
+		// logging data
+		logging_data(record_data, cycle, calc_temperature());
+
+        // update coor
 		cblas_daxpy(vsize, dt, velocity.data(), 1, coor.data(), 1);
 		cblas_daxpy(vsize, dt_square, accelerate.data(), 1, coor.data(), 1);
 

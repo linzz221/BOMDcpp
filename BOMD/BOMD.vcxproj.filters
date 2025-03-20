@@ -40,5 +40,6 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="tempforce.log" />
+    <Text Include="vel.txt" />
   </ItemGroup>
 </Project>

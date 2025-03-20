@@ -5,6 +5,7 @@
 #include <sstream>
 #include <format>
 #include <cstdlib>
+#include <random>
 #include <mkl.h>
 #include <mkl_vsl.h>
 
@@ -14,11 +15,13 @@
 
 using namespace std;
 
-BOMD::BOMD(const string & igjf, const string & ivel) {
+BOMD::BOMD(const string & igjf, const double& itemp, const string & ivel) {
 	gjfname = igjf;
 	velname = ivel;
+	temperature = itemp;
 	readgjf();
 	create_mass_sequ();
+
 	if (velname == "noneed") {
 		makevel(); 
 	}
@@ -32,19 +35,24 @@ BOMD::BOMD(const string & igjf, const string & ivel) {
 BOMD::~BOMD() {
 }
 
-void BOMD::makevel(const double& temperature) {
-	const int size = 3 * atomnum;
+void BOMD::makevel() {
+	random_device rd;
 	VSLStreamStatePtr stream;
-	vslNewStream(&stream, VSL_BRNG_MT19937, 520);
-	vdRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream, size, velocity.data(), 0, 0.5);
+	double check = -500;
+	while (fabs(check - temperature) > 50){
+		vslNewStream(&stream, VSL_BRNG_MT19937, rd());
+		vdRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream, vsize, velocity.data(), 0, 0.5);
+		
+		auto sumv = cblas_dasum(vsize, velocity.data(), 1) / vsize;
+		vdMul(vsize, velocity.data(), velocity.data(), velocity.data());
+		auto sumv2 = cblas_ddot(vsize, mass_sequ.data(), 1, velocity.data(), 1) / vsize;
+		auto fs = sqrt(3 * (temperature / cs::temp_au2si) / sumv2);
+		transform(velocity.begin(), velocity.end(), velocity.begin(), 
+			[sumv, fs](double x){return (x - sumv) * fs; });
+		check = calc_temperature();
+		cout << check << endl;
+	}
 	vslDeleteStream(&stream);
-
-	auto sumv = cblas_dasum(size, velocity.data(), 1) / size;
-	vdMul(size, velocity.data(), velocity.data(), velocity.data());
-	auto sumv2 = cblas_ddot(size, mass_sequ.data(), 1, velocity.data(), 1) / size;
-	auto fs = sqrt(3 * (temperature / cs::temp_au2si) / sumv2);
-	transform(velocity.begin(), velocity.end(), velocity.begin(), [sumv, fs](double x) 
-		{return (x - sumv) * fs; });
 }
 
 void BOMD::readvel() {
@@ -70,15 +78,14 @@ void BOMD::readvel() {
 }
 
 double BOMD::calc_temperature() {
-	auto vsize = 3 * atomnum;
 	vecd v2(vsize);
 	vdMul(vsize, velocity.data(), velocity.data(), v2.data());
 	double result = cblas_ddot(vsize, v2.data(), 1, mass_sequ.data(), 1);
-	result = result / 3 / atomnum;
-	return result * cs::temp_au2si;
+	result = result * cs::temp_au2si / 3 / atomnum;
+	return result;
 }
 
-// will init atomnum, atomsequ, coor, gjfhead
+// will init atomnum, atomsequ, coor, gjfhead, vsize
 // and reserve force, velocity, mass_sequ
 void BOMD::readgjf() {
 	vector<string> allgjfline_raw;
@@ -113,6 +120,7 @@ void BOMD::readgjf() {
 		coor.push_back(z / cs::coor_au2A);
 	}
 	atomnum = atomsequ.size();
+	vsize = 3 * atomnum;
     force.resize(atomnum * 3);
     velocity.resize(atomnum * 3);
 	mass_sequ.resize(atomnum * 3, 0);
@@ -176,9 +184,9 @@ void BOMD::create_gjf() {
 void BOMD::logging_data(ofstream & data ,const long long cycle, 
 	const double temperature) {
 	static string equ40(80, '=');
-	static string sub20(20, '-');
-	const string midd(format("{}  -----cycle  {} -----   Temperature {:3f} ------ {}",
-		sub20, cycle, temperature, sub20));
+	static string sub10(10, '-');
+	const string midd(format("{}    -----cycle  {} -----  Temperature {:3f}  ------ {}",
+		sub10, cycle, temperature, sub10));
 	data << equ40 << '\n' << midd << '\n' << equ40 << '\n';
 	for (int i = 0; i < atomnum; ++i) {
 		data << format("{:>4}        {:>15.10f}      {:>15.10f}      {:>15.10f}",
@@ -199,7 +207,6 @@ void BOMD::run(const long long nstep, const double idt) {
 	double dt = idt / cs::time_au2fs;
 	double dt_d2 = dt / 2;
 	double dt_square = dt * dt / 2;
-	const auto vsize = 3 * atomnum;
 
 	vecd accelerate(vsize, 0);
 	vecd accelerate_old(vsize, 0);

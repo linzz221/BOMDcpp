@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <format>
 
 using namespace std;
 
@@ -24,7 +25,7 @@ void readlines(const string& filename, vector<string>& result) {
 
 template <typename T> void showvector(const vector<T>& vec) {
     for (const auto& el : vec) {
-        cout << el << endl;
+        cout << format("{:10f}", el) << endl;
     }
 	cout << endl;
 };

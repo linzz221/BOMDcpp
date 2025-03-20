@@ -165,7 +165,7 @@ void BOMD::create_gjf() {
 }
 
 void BOMD::run(const long long nstep, const double idt) {
-	double dt = idt / cs::temp_au2si;
+	double dt = idt / cs::time_au2fs;
 	double dt_d2 = dt / 2;
 	double dt_square = dt * dt / 2;
 	const auto vsize = 3 * atomnum;

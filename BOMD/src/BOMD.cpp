@@ -49,6 +49,10 @@ void BOMD::makevel(const double& temperature) {
 
 void BOMD::readvel() {
 	ifstream vel(velname);
+    if (!vel.is_open()) {
+        cerr << "Error: velocity file not found" << endl;
+        exit(1);
+    }
 	string useless;
 	double x, y, z;
 	int i = 0;
@@ -66,7 +70,7 @@ void BOMD::readvel() {
 }
 
 // will init atomnum, atomsequ, coor, gjfhead
-// and reserve force, velocity
+// and reserve force, velocity, mass_sequ
 void BOMD::readgjf() {
 	vector<string> allgjfline_raw;
 	readlines(gjfname, allgjfline_raw);
@@ -100,13 +104,13 @@ void BOMD::readgjf() {
 		coor.push_back(z / cs::coor_au2A);
 	}
 	atomnum = atomsequ.size();
-    force.reserve(atomnum * 3);
-    velocity.reserve(atomnum * 3);
+    force.resize(atomnum * 3);
+    velocity.resize(atomnum * 3);
+	mass_sequ.resize(atomnum * 3, 0);
 }
 
 // init mass_sequ
 void BOMD::create_mass_sequ() {
-	mass_sequ.resize(atomnum * 3, 0);
 	auto it = mass_sequ.begin();
 	for (const auto& el : atomsequ) {
 		double mass = cs::amu_mass.at(el) * cs::amu2au;
@@ -195,5 +199,6 @@ void BOMD::run(const long long nstep, const double idt) {
 }
 
 void BOMD::showmass() {
-	showvector(velocity);
+	readforce();
+	showvector(force);
 }

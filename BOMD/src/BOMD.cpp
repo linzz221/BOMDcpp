@@ -193,12 +193,7 @@ void BOMD::run(const long long nstep, const double idt) {
 		cblas_daxpy(vsize, dt_d2, accelerate.data(), 1, velocity.data(), 1);
 		cblas_daxpy(vsize, dt_d2, accelerate_old.data(), 1, velocity.data(), 1);
 
-		showvector(coor);
 	}
 
 }
 
-void BOMD::showmass() {
-	readforce();
-	showvector(force);
-}

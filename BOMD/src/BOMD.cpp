@@ -34,7 +34,6 @@ BOMD::~BOMD() {
 
 void BOMD::makevel(const double& temperature) {
 	const int size = 3 * atomnum;
-	velocity.resize(size, 0);
 	VSLStreamStatePtr stream;
 	vslNewStream(&stream, VSL_BRNG_MT19937, 520);
 	vdRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream, size, velocity.data(), 0, 0.5);
@@ -50,7 +49,6 @@ void BOMD::makevel(const double& temperature) {
 
 void BOMD::readvel() {
 	ifstream vel(velname);
-	velocity.resize(3 * atomnum);
 	string useless;
 	double x, y, z;
 	int i = 0;
@@ -68,6 +66,7 @@ void BOMD::readvel() {
 }
 
 // will init atomnum, atomsequ, coor, gjfhead
+// and reserve force, velocity
 void BOMD::readgjf() {
 	vector<string> allgjfline_raw;
 	readlines(gjfname, allgjfline_raw);
@@ -101,7 +100,8 @@ void BOMD::readgjf() {
 		coor.push_back(z / cs::coor_au2A);
 	}
 	atomnum = atomsequ.size();
-
+    force.reserve(atomnum * 3);
+    velocity.reserve(atomnum * 3);
 }
 
 // init mass_sequ
@@ -132,12 +132,12 @@ void BOMD::readforce() {
 	
 	int useless;
 	double x, y, z;
-	for (const string& i : alllogline) {
-		istringstream iss(i);
+	for (int i = 0; i < atomnum; ++i) {
+		istringstream iss(alllogline[i]);
 		iss >> useless >> useless >> x >> y >> z;
-		force.push_back(x);
-		force.push_back(y);
-		force.push_back(z);
+        force[i * 3] = x;
+        force[i * 3 + 1] = y;
+		force[i * 3 + 2] = z;
 	}
 
 }
@@ -189,7 +189,7 @@ void BOMD::run(const long long nstep, const double idt) {
 		cblas_daxpy(vsize, dt_d2, accelerate.data(), 1, velocity.data(), 1);
 		cblas_daxpy(vsize, dt_d2, accelerate_old.data(), 1, velocity.data(), 1);
 
-        showvector(coor);
+		showvector(coor);
 	}
 
 }

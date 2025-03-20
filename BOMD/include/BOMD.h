@@ -32,6 +32,7 @@ private:
 
 public:
 	BOMD(const string& gjfname, const string& velname = "noneed");
+	~BOMD();
 	void showmass();
 	void run(long long nstep, double dt = 0.5);
 

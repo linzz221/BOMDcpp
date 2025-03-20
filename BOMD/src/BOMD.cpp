@@ -15,12 +15,21 @@
 using namespace std;
 
 BOMD::BOMD(const string & igjf, const string & ivel) {
-    gjfname = igjf;
-    velname = ivel;
+	gjfname = igjf;
+	velname = ivel;
 	readgjf();
 	create_mass_sequ();
-	if (velname == "noneed") { makevel(); };
+	if (velname == "noneed") {
+		makevel(); 
+	}
+	else
+	{
+		readvel();
+	}
 
+}
+
+BOMD::~BOMD() {
 }
 
 void BOMD::makevel(const double& temperature) {
@@ -35,7 +44,27 @@ void BOMD::makevel(const double& temperature) {
 	vdMul(size, velocity.data(), velocity.data(), velocity.data());
 	auto sumv2 = cblas_ddot(size, mass_sequ.data(), 1, velocity.data(), 1) / size;
 	auto fs = sqrt(3 * (temperature / cs::temp_au2si) / sumv2);
-	transform(velocity.begin(), velocity.end(), velocity.begin(), [sumv, fs](double x) {return (x - sumv) * fs; });
+	transform(velocity.begin(), velocity.end(), velocity.begin(), [sumv, fs](double x) 
+		{return (x - sumv) * fs; });
+}
+
+void BOMD::readvel() {
+	ifstream vel(velname);
+	velocity.resize(3 * atomnum);
+	string useless;
+	double x, y, z;
+	int i = 0;
+	while (vel >> useless >> x >> y >> z) {
+		velocity[i * 3] = x;
+		velocity[i * 3 + 1] = y;
+		velocity[i * 3 + 2] = z;
+        ++i;
+	}
+	vel.close();
+	if (i != atomnum) {
+		cerr << "Error: velocity file is not correct" << endl;
+		exit(1);
+	}
 }
 
 // will init atomnum, atomsequ, coor, gjfhead
@@ -47,45 +76,46 @@ void BOMD::readgjf() {
 
 	for (int sl = 0; sl < gjf_line_num; ++sl) {
 		if (allgjfline[sl].starts_with("#")) {
-            gjfhead = accumulate(allgjfline.begin(), allgjfline.begin() + sl + 5, gjfhead, 
+			gjfhead = accumulate(allgjfline.begin(), allgjfline.begin() + sl + 5, gjfhead, 
 				[](const std::string& acc, const std::string& s) {return acc + s + '\n';});
 			allgjfline = allgjfline.last(gjf_line_num - sl - 5);
 			break;
 		}   
 	}
 
-    for (auto el = 0; el < allgjfline.size(); ++el) {
-        if (allgjfline[el].empty()) {
+	for (auto el = 0; el < allgjfline.size(); ++el) {
+		if (allgjfline[el].empty()) {
 			allgjfline = allgjfline.first(el);
-            break;
-        }
-    }
+			break;
+		}
+	}
 
 	string element;
 	double x, y, z;
 	for (const string & line : allgjfline) {
 		istringstream iss(line);
-        iss >> element >> x >> y >> z;
-        atomsequ.push_back(element);
-        coor.push_back(x / cs::coor_au2A);
-        coor.push_back(y / cs::coor_au2A);
-        coor.push_back(z / cs::coor_au2A);
+		iss >> element >> x >> y >> z;
+		atomsequ.push_back(element);
+		coor.push_back(x / cs::coor_au2A);
+		coor.push_back(y / cs::coor_au2A);
+		coor.push_back(z / cs::coor_au2A);
 	}
-    atomnum = atomsequ.size();
+	atomnum = atomsequ.size();
 
 }
 
 // init mass_sequ
 void BOMD::create_mass_sequ() {
-    mass_sequ.resize(atomnum * 3, 0);
-    auto it = mass_sequ.begin();
-    for (const auto& el : atomsequ) {
-        double mass = cs::amu_mass.at(el) * cs::amu2au;
-        fill_n(it, 3, mass);
-        it += 3;
-    }
+	mass_sequ.resize(atomnum * 3, 0);
+	auto it = mass_sequ.begin();
+	for (const auto& el : atomsequ) {
+		double mass = cs::amu_mass.at(el) * cs::amu2au;
+		fill_n(it, 3, mass);
+		it += 3;
+	}
 }
 
+// update force
 void BOMD::readforce() {
 	vector<string> alllogline_raw;
 	const string findflag = " Center     Atomic                   Forces (Hartrees/Bohr)";
@@ -122,7 +152,7 @@ void BOMD::create_gjf() {
 	for (int i = 0; i < atomnum; ++i) {
 		gjf << atomsequ[i];
 		for (int j = 0; j < 3; ++j) {
-			gjf << format(" {:>15.10f}", coor[i * 3 + j]);
+			gjf << format(" {:>15.10f}", coor[i * 3 + j] * cs::coor_au2A);
 		}
 		gjf << '\n';
 	}
@@ -132,9 +162,38 @@ void BOMD::create_gjf() {
 
 void BOMD::run(const long long nstep, const double idt) {
 	double dt = idt / cs::temp_au2si;
-	double dt2 = dt * dt / 2;
+	double dt_d2 = dt / 2;
+	double dt_square = dt * dt / 2;
+	const auto vsize = 3 * atomnum;
+
+	vecd accelerate(vsize, 0);
+	vecd accelerate_old(vsize, 0);
+	system(format("g16 {} {}", gjfname, templogfile).c_str());
+	readforce();
+	vdDiv(vsize, force.data(), mass_sequ.data(), accelerate.data());
+
+	for (long long cycle = 1; cycle <= nstep; ++cycle) {
+		
+        //update coor
+		cblas_daxpy(vsize, dt, velocity.data(), 1, coor.data(), 1);
+		cblas_daxpy(vsize, dt_square, accelerate.data(), 1, coor.data(), 1);
+
+		//update force
+		create_gjf();
+		rungaussian();
+		readforce();
+        cblas_dcopy(vsize, accelerate.data(), 1, accelerate_old.data(), 1);
+		vdDiv(vsize, force.data(), mass_sequ.data(), accelerate.data());
+        
+		//update velocity
+		cblas_daxpy(vsize, dt_d2, accelerate.data(), 1, velocity.data(), 1);
+		cblas_daxpy(vsize, dt_d2, accelerate_old.data(), 1, velocity.data(), 1);
+
+        showvector(coor);
+	}
+
 }
 
 void BOMD::showmass() {
-	create_gjf();
+	showvector(velocity);
 }

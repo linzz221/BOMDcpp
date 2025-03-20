@@ -26,6 +26,7 @@ template <typename T> void showvector(const vector<T>& vec) {
     for (const auto& el : vec) {
         cout << el << endl;
     }
+	cout << endl;
 };
 
 

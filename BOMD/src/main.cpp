@@ -3,6 +3,6 @@
 using namespace std;
 
 int main() {
-    BOMD bomd("test.gjf");
-    bomd.showmass();
+    BOMD bomd("test.gjf", "vel.txt");
+    bomd.run(3, 0.5);
 }

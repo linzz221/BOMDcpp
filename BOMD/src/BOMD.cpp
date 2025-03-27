@@ -1,4 +1,4 @@
-#include <cmath>
+ï»¿#include <cmath>
 #include <algorithm>
 #include <span>
 #include <numeric>
@@ -54,7 +54,7 @@ void BOMD::makevel() {
 		}
 		cblas_dscal(3, double(1.0 / atomnum), temp_v_sum.data(), 1);
 
-		// fsÓÃÓÚ½ÃÕıÎÂ¶È
+		// fsç”¨äºçŸ«æ­£æ¸©åº¦
 		vdMul(vsize, velocity.data(), velocity.data(), temp_v_2.data());
 		auto sumv2 = cblas_ddot(vsize, mass_sequ.data(), 1, temp_v_2.data(), 1) / double(vsize);
 		auto fs = sqrt(3 * (temperature / cs::temp_au2si) / sumv2);
@@ -215,7 +215,7 @@ void BOMD::logging_data(ofstream & data ,const long long cycle,
 
 void BOMD::run(const long long nstep, const double idt) {
 
-	// ÏÈÇå¿ÕdataÎÄ¼ş
+	// å…ˆæ¸…ç©ºdataæ–‡ä»¶
 	ofstream record_clear(data_name, ios::trunc);
 	record_clear.close();
 

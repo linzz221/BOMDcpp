@@ -39,16 +39,32 @@ void BOMD::makevel() {
 	random_device rd;
 	VSLStreamStatePtr stream;
 	double check = -500;
+    vecd temp_v_2(vsize);
+	vecd temp_v_sum(3);
+
 	while (fabs(check - temperature) > 50){
 		vslNewStream(&stream, VSL_BRNG_MT19937, rd());
-		vdRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream, vsize, velocity.data(), 0, 0.5);
-		
-		auto sumv = cblas_dasum(vsize, velocity.data(), 1) / vsize;
-		vdMul(vsize, velocity.data(), velocity.data(), velocity.data());
-		auto sumv2 = cblas_ddot(vsize, mass_sequ.data(), 1, velocity.data(), 1) / vsize;
+		vdRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream, vsize, velocity.data(), -0.5, 0.5);
+
+		temp_v_sum = { 0, 0, 0 };
+		for (auto i = 0; i < atomnum; ++i) {
+            temp_v_sum[0] += velocity[3 * i];
+            temp_v_sum[1] += velocity[3 * i + 1];
+            temp_v_sum[2] += velocity[3 * i + 2];
+		}
+		cblas_dscal(3, double(1.0 / atomnum), temp_v_sum.data(), 1);
+
+		// fs用于矫正温度
+		vdMul(vsize, velocity.data(), velocity.data(), temp_v_2.data());
+		auto sumv2 = cblas_ddot(vsize, mass_sequ.data(), 1, temp_v_2.data(), 1) / double(vsize);
 		auto fs = sqrt(3 * (temperature / cs::temp_au2si) / sumv2);
-		transform(velocity.begin(), velocity.end(), velocity.begin(), 
-			[sumv, fs](double x){return (x - sumv) * fs; });
+
+		for (auto i = 0; i < atomnum; ++i){
+			velocity[3 * i] = (velocity[3 * i] - temp_v_sum[0]) * fs;
+			velocity[3 * i + 1] = (velocity[3 * i + 1] - temp_v_sum[1]) * fs;
+			velocity[3 * i + 2] = (velocity[3 * i + 2] - temp_v_sum[2]) * fs;
+		}
+		
 		check = calc_temperature();
 		cout << check << endl;
 	}
@@ -113,11 +129,12 @@ void BOMD::readgjf() {
 	double x, y, z;
 	for (const string & line : allgjfline) {
 		istringstream iss(line);
-		iss >> element >> x >> y >> z;
-		atomsequ.push_back(element);
-		coor.push_back(x / cs::coor_au2A);
-		coor.push_back(y / cs::coor_au2A);
-		coor.push_back(z / cs::coor_au2A);
+		while (iss >> element >> x >> y >> z) {
+			atomsequ.push_back(element);
+			coor.push_back(x / cs::coor_au2A);
+			coor.push_back(y / cs::coor_au2A);
+			coor.push_back(z / cs::coor_au2A);
+		}		
 	}
 	atomnum = atomsequ.size();
 	vsize = 3 * atomnum;
